@@ -5148,6 +5148,12 @@ void SV_UnloadProgs( void )
 {
 	pending_cvar_t *pending_cvars_list;
 
+	if( SV_IsDeadZoneServerLoaded() )
+	{
+		SV_UnloadDeadZoneServer();
+		return;
+	}
+
 	if( !svgame.hInstance )
 		return;
 
@@ -5198,6 +5204,13 @@ qboolean SV_LoadProgs( const char *name )
 	static globalvars_t		gpGlobals;
 	static playermove_t		gpMove;
 	qboolean init_entity_api = false;
+
+	if( GI->deadzone_server_api )
+	{
+		Con_Printf( "DeadZone native loader: gameinfo requested server API version %u\n",
+			GI->deadzone_server_api );
+		return SV_LoadDeadZoneServer( name, GI->deadzone_server_api );
+	}
 
 	if( svgame.hInstance )
 		return true;

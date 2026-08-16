@@ -3884,6 +3884,12 @@ static cl_enginefunc_t gEngfuncs =
 
 void CL_UnloadProgs( void )
 {
+	if( CL_IsDeadZoneClientLoaded() )
+	{
+		CL_UnloadDeadZoneClient();
+		return;
+	}
+
 	if( !clgame.hInstance ) return;
 
 	CL_FreeEdicts();
@@ -3983,6 +3989,14 @@ qboolean CL_LoadProgs( const char *name )
 	qboolean try_internal_vgui_support = GI->internal_vgui_support;
 
 	if( clgame.hInstance ) CL_UnloadProgs();
+	if( CL_IsDeadZoneClientLoaded() ) CL_UnloadDeadZoneClient();
+
+	if( GI->deadzone_client_api )
+	{
+		Con_Printf( "DeadZone native client loader: gameinfo requested client API version %u\n",
+			GI->deadzone_client_api );
+		return CL_LoadDeadZoneClient( name, GI->deadzone_client_api );
+	}
 
 	// initialize PlayerMove
 	clgame.pmove = &gpMove;

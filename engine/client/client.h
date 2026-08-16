@@ -854,6 +854,9 @@ int CL_DrawStringf( cl_font_t *font, float x, float y, const rgba_t color, int f
 //
 void CL_UnloadProgs( void );
 qboolean CL_LoadProgs( const char *name );
+qboolean CL_LoadDeadZoneClient( const char *name, uint32_t requested_version );
+qboolean CL_IsDeadZoneClientLoaded( void );
+void CL_UnloadDeadZoneClient( void );
 void CL_LinkUserMessage( char *pszName, const int svc_num, int iSize );
 void CL_DrawHUD( int state );
 void CL_InitEdicts( int maxclients );

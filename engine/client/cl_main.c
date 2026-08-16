@@ -3856,6 +3856,7 @@ void Host_ClientBegin( void )
 
 	// if client is not active, do nothing
 	if( !cls.initialized ) return;
+	if( CL_IsDeadZoneClientLoaded() ) return;
 
 	// finalize connection process if needs
 	CL_CheckClientState();
@@ -3882,6 +3883,10 @@ void Host_ClientFrame( void )
 {
 	// if client is not active, do nothing
 	if( !cls.initialized ) return;
+
+	// DZ-ENG-002 proves native client lifecycle only. Presentation and input
+	// callbacks arrive in later versioned APIs; keep the native client idle.
+	if( CL_IsDeadZoneClientLoaded() ) return;
 	if( cls.key_dest == key_game && cls.state == ca_active && !Con_Visible() )
 		Platform_SetTimer( cl_maxframetime.value );
 

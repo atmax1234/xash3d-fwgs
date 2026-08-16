@@ -91,6 +91,11 @@ static qboolean FS_WriteGameInfo( const char *filepath, const gameinfo_t *GameIn
 	if( !COM_StringEmpty( GameInfo->game_dll ))
 		FS_Printf( f, "gamedll\t\t\"%s\"\n", GameInfo->game_dll );
 
+	if( GameInfo->deadzone_server_api )
+		FS_Printf( f, "deadzone_server_api\t\t%u\n", GameInfo->deadzone_server_api );
+	if( GameInfo->deadzone_client_api )
+		FS_Printf( f, "deadzone_client_api\t\t%u\n", GameInfo->deadzone_client_api );
+
 	if( !COM_StringEmpty( GameInfo->game_dll_linux ))
 		FS_Printf( f, "gamedll_linux\t\t\"%s\"\n", GameInfo->game_dll_linux );
 
@@ -266,6 +271,17 @@ static void FS_ParseGenericGameInfo( gameinfo_t *GameInfo, const char *buf, cons
 		{
 			pfile = COM_ParseFile( pfile, GameInfo->game_dll, sizeof( GameInfo->game_dll ));
 			COM_FixSlashes( GameInfo->game_dll );
+		}
+		// DeadZone-native server ABI selection; gameinfo.txt only
+		else if( isGameInfo && !Q_stricmp( token, "deadzone_server_api" ))
+		{
+			pfile = COM_ParseFile( pfile, token, sizeof( token ));
+			GameInfo->deadzone_server_api = Q_max( 0, Q_atoi( token ));
+		}
+		else if( isGameInfo && !Q_stricmp( token, "deadzone_client_api" ))
+		{
+			pfile = COM_ParseFile( pfile, token, sizeof( token ));
+			GameInfo->deadzone_client_api = Q_max( 0, Q_atoi( token ));
 		}
 		// valid for both
 		else if( !Q_stricmp( token, "gamedll_linux" ))

@@ -691,6 +691,13 @@ void SV_DeactivateServer( void )
 	if( !svs.initialized || sv.state == ss_dead )
 		return;
 
+	if( SV_IsDeadZoneServerLoaded() )
+	{
+		SV_DeadZoneMapUnloaded();
+		Host_SetServerState( ss_dead );
+		return;
+	}
+
 	SV_InactivateClients();
 
 	svgame.globals->time = sv.time;
@@ -730,7 +737,7 @@ qboolean SV_InitGame( qboolean silent )
 {
 	string dllpath;
 
-	if( svgame.hInstance )
+	if( svgame.hInstance || SV_IsDeadZoneServerLoaded() )
 		return true;
 
 	// first initialize?
@@ -829,6 +836,55 @@ static void SV_SetupClients( void )
 	NET_Config(( svs.maxclients > 1 ), true );
 	svgame.numEntities = svs.maxclients + 1; // clients + world
 	ClearBits( sv_maxclients.flags, FCVAR_CHANGED );
+}
+
+static qboolean SV_SpawnDeadZoneMap( const char *mapname, qboolean background )
+{
+	int i;
+
+	svs.initialized = true;
+	Log_Open();
+	Log_Printf( "Loading native DeadZone map \"%s\"\n", mapname );
+	svs.timestart = Platform_DoubleTime();
+	svs.spawncount++;
+
+	for( i = 0; i < ARRAYSIZE( svs.challenge_salt ); i++ )
+		svs.challenge_salt[i] = COM_RandomLong( 0, 0x7FFFFFFE );
+
+	memset( &sv, 0, sizeof( sv ));
+	sv.time = 1.0f;
+	sv.background = background;
+
+	MSG_Init( &sv.signon, "Signon", sv.signon_buf, sizeof( sv.signon_buf ));
+	MSG_Init( &sv.multicast, "Multicast", sv.multicast_buf, sizeof( sv.multicast_buf ));
+	MSG_Init( &sv.datagram, "Datagram", sv.datagram_buf, sizeof( sv.datagram_buf ));
+	MSG_Init( &sv.reliable_datagram, "Reliable Datagram", sv.reliable_datagram_buf, sizeof( sv.reliable_datagram_buf ));
+	MSG_Init( &sv.spec_datagram, "Spectator Datagram", sv.spectator_buf, sizeof( sv.spectator_buf ));
+
+	Q_strncpy( sv.name, mapname, sizeof( sv.name ));
+	COM_StripExtension( sv.name );
+	Host_SetServerState( ss_loading );
+
+	Q_snprintf( sv.model_precache[WORLD_INDEX], sizeof( sv.model_precache[0] ),
+		"maps/%s.bsp", sv.name );
+	SetBits( sv.model_precache_flags[WORLD_INDEX], RES_FATALIFMISSING );
+	sv.worldmodel = sv.models[WORLD_INDEX] = Mod_LoadWorld(
+		sv.model_precache[WORLD_INDEX], true );
+	CRC32_MapFile( &sv.worldmapCRC, sv.model_precache[WORLD_INDEX],
+		svs.maxclients > 1 );
+
+	if( !sv.worldmodel || !SV_DeadZoneMapLoaded( sv.name ))
+	{
+		SV_Shutdown( "DeadZone native map startup failed\n" );
+		return false;
+	}
+
+	Host_SetServerState( ss_active );
+	Log_Printf( "Started native DeadZone map \"%s\" (CRC \"%u\")\n",
+		sv.name, sv.worldmapCRC );
+	Con_Printf( "DeadZone native map: loaded original BSP maps/%s.bsp in %.2f ms\n",
+		sv.name, ( Platform_DoubleTime() - svs.timestart ) * 1000.0 );
+	return true;
 }
 
 
@@ -937,6 +993,9 @@ qboolean SV_SpawnServer( const char *mapname, const char *startspot, qboolean ba
 
 	if( !SV_InitGame( false ))
 		return false;
+
+	if( SV_IsDeadZoneServerLoaded() )
+		return SV_SpawnDeadZoneMap( mapname, background );
 
 	Delta_Init(); // re-initialize delta
 
@@ -1099,6 +1158,9 @@ void SV_ExecLoadLevel( void )
 	SV_SetStringArrayMode( false );
 	if( SV_SpawnServer( GameState->levelName, NULL, GameState->backgroundMap ))
 	{
+		if( SV_IsDeadZoneServerLoaded() )
+			return;
+
 		SV_SpawnEntities( GameState->levelName );
 		SV_ActivateServer( true );
 	}

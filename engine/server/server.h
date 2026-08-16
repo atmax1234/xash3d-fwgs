@@ -597,6 +597,11 @@ void SV_SkipUpdates( void );
 //
 qboolean SV_LoadProgs( const char *name );
 void SV_UnloadProgs( void );
+qboolean SV_LoadDeadZoneServer( const char *name, uint32_t requested_version );
+qboolean SV_IsDeadZoneServerLoaded( void );
+qboolean SV_DeadZoneMapLoaded( const char *mapname );
+void SV_DeadZoneMapUnloaded( void );
+void SV_UnloadDeadZoneServer( void );
 void SV_FreeEdicts( void );
 edict_t *SV_AllocEdict( void );
 void SV_FreeEdict( edict_t *pEdict );

@@ -88,6 +88,8 @@ typedef struct gameinfo_s
 	// .dll pathes
 	char		dll_path[MAX_QPATH];	// e.g. "bin" or "cl_dlls"
 	char		game_dll[MAX_QPATH];	// custom path for game.dll
+	uint32_t	deadzone_server_api;	// non-zero selects the DeadZone-native server ABI
+	uint32_t	deadzone_client_api;	// non-zero selects the DeadZone-native client ABI
 
 	// .ico path
 	char		iconpath[MAX_QPATH];	// "game.ico" by default
