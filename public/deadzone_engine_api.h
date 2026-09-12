@@ -18,6 +18,7 @@ GNU General Public License for more details.
 
 #include <stddef.h>
 #include <stdint.h>
+#include "deadzone_movement_api.h"
 
 #if defined( _WIN32 ) && defined( _MSC_VER )
 #define DEADZONE_API_CALL __cdecl
@@ -30,7 +31,8 @@ GNU General Public License for more details.
 #define DEADZONE_SERVER_API_VERSION_1 1u
 #define DEADZONE_SERVER_API_VERSION_2 2u
 #define DEADZONE_SERVER_API_VERSION_3 3u
-#define DEADZONE_SERVER_API_VERSION DEADZONE_SERVER_API_VERSION_3
+#define DEADZONE_SERVER_API_VERSION_4 4u
+#define DEADZONE_SERVER_API_VERSION DEADZONE_SERVER_API_VERSION_4
 #define DEADZONE_MAP_INFO_VERSION 1u
 #define DEADZONE_PLAYER_SPAWN_VERSION 1u
 #define DEADZONE_SERVER_QUERY_ENTRY "DeadZone_ServerQuery"
@@ -50,6 +52,9 @@ typedef int32_t deadzone_log_level_t;
 
 typedef void ( DEADZONE_API_CALL *deadzone_log_message_fn )( void *context,
 	deadzone_log_level_t level, const char *message, uint32_t message_length );
+typedef deadzone_result_t ( DEADZONE_API_CALL *deadzone_trace_player_fn )(
+	void *context, const deadzone_player_trace_request_t *request,
+	deadzone_player_trace_result_t *result );
 
 /* Owned by the engine and valid until the module shutdown callback returns. */
 typedef struct deadzone_engine_api_s
@@ -58,6 +63,8 @@ typedef struct deadzone_engine_api_s
 	uint32_t version;
 	void *context;
 	deadzone_log_message_fn log_message;
+	/* API v4 field begins here. */
+	deadzone_trace_player_fn trace_player;
 } deadzone_engine_api_t;
 
 typedef void ( DEADZONE_API_CALL *deadzone_server_shutdown_fn )( void *context );
@@ -101,6 +108,9 @@ typedef deadzone_result_t ( DEADZONE_API_CALL *deadzone_server_spawn_player_fn )
 	void *context, deadzone_player_spawn_t *spawn );
 typedef void ( DEADZONE_API_CALL *deadzone_server_despawn_player_fn )(
 	void *context, uint32_t player_id );
+typedef deadzone_result_t ( DEADZONE_API_CALL *deadzone_server_simulate_player_fn )(
+	void *context, const deadzone_move_intent_t *intent, float frame_seconds,
+	deadzone_player_state_t *state );
 
 /* Filled by the server module. The engine ignores fields beyond size. */
 typedef struct deadzone_server_api_s
@@ -115,6 +125,8 @@ typedef struct deadzone_server_api_s
 	/* API v3 fields begin here. */
 	deadzone_server_spawn_player_fn spawn_player;
 	deadzone_server_despawn_player_fn despawn_player;
+	/* API v4 field begins here. */
+	deadzone_server_simulate_player_fn simulate_player;
 } deadzone_server_api_t;
 
 typedef deadzone_result_t ( DEADZONE_API_CALL *deadzone_server_query_fn )(

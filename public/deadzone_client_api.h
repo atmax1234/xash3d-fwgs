@@ -18,6 +18,7 @@ GNU General Public License for more details.
 
 #include <stddef.h>
 #include <stdint.h>
+#include "deadzone_movement_api.h"
 
 #if defined( _WIN32 ) && defined( _MSC_VER )
 #define DEADZONE_CLIENT_API_CALL __cdecl
@@ -29,7 +30,8 @@ GNU General Public License for more details.
 
 #define DEADZONE_CLIENT_API_VERSION_1 1u
 #define DEADZONE_CLIENT_API_VERSION_2 2u
-#define DEADZONE_CLIENT_API_VERSION DEADZONE_CLIENT_API_VERSION_2
+#define DEADZONE_CLIENT_API_VERSION_3 3u
+#define DEADZONE_CLIENT_API_VERSION DEADZONE_CLIENT_API_VERSION_3
 #define DEADZONE_CLIENT_QUERY_ENTRY "DeadZone_ClientQuery"
 #define DEADZONE_CAMERA_INPUT_VERSION 1u
 #define DEADZONE_CAMERA_STATE_VERSION 1u
@@ -88,6 +90,9 @@ typedef struct deadzone_camera_state_s
 typedef deadzone_client_result_t ( DEADZONE_CLIENT_API_CALL *deadzone_client_camera_frame_fn )(
 	void *context, const deadzone_camera_input_t *input,
 	deadzone_camera_state_t *camera );
+typedef deadzone_client_result_t ( DEADZONE_CLIENT_API_CALL *deadzone_client_input_frame_fn )(
+	void *context, const deadzone_input_sample_t *input,
+	deadzone_move_intent_t *intent );
 
 /* Filled by the client module. The engine ignores fields beyond size. */
 typedef struct deadzone_client_api_s
@@ -98,6 +103,8 @@ typedef struct deadzone_client_api_s
 	deadzone_client_shutdown_fn shutdown;
 	/* API v2 fields begin here. */
 	deadzone_client_camera_frame_fn camera_frame;
+	/* API v3 field begins here. */
+	deadzone_client_input_frame_fn input_frame;
 } deadzone_client_api_t;
 
 typedef deadzone_client_result_t ( DEADZONE_CLIENT_API_CALL *deadzone_client_query_fn )(

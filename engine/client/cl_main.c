@@ -3888,6 +3888,7 @@ void Host_ClientFrame( void )
 	{
 		if( CL_IsDeadZoneLocalMapActive() )
 		{
+			CL_DeadZoneMovementFrame();
 			if( cls.key_dest == key_game && !Con_Visible() )
 				Platform_SetTimer( cl_maxframetime.value );
 			cl.oldtime = cl.time;

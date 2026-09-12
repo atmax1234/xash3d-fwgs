@@ -862,6 +862,7 @@ qboolean CL_DeadZoneStartLocalMap( const char *mapname, model_t *worldmodel,
 	float eye_height );
 qboolean CL_DeadZoneGetCamera( vec3_t view_origin, vec3_t view_angles,
 	float *horizontal_fov_degrees );
+qboolean CL_DeadZoneMovementFrame( void );
 qboolean CL_IsDeadZoneLocalMapActive( void );
 void CL_DeadZoneStopLocalMap( void );
 void CL_LinkUserMessage( char *pszName, const int svc_num, int iSize );

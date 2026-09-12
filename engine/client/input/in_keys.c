@@ -708,7 +708,8 @@ void GAME_EXPORT Key_Event( int key, int down )
 	}
 #endif
 	// distribute the key down event to the apropriate handler
-	if( cls.key_dest == key_game && ( down || keys[key].gamedown ))
+	if( !CL_IsDeadZoneClientLoaded() && cls.key_dest == key_game &&
+		( down || keys[key].gamedown ))
 	{
 		if( !clgame.dllFuncs.pfnKey_Event( down, key, keys[key].binding ))
 		{
@@ -776,7 +777,8 @@ void GAME_EXPORT Key_Event( int key, int down )
 				Cvar_DirectSet( &r_showtextures, "0" );
 				return;
 			}
-			else if( host.mouse_visible && cls.state != ca_cinematic )
+			else if( !CL_IsDeadZoneClientLoaded() && host.mouse_visible &&
+				cls.state != ca_cinematic )
 			{
 				clgame.dllFuncs.pfnKey_Event( down, key, keys[key].binding );
 				return; // handled in client.dll

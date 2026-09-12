@@ -596,12 +596,17 @@ void SV_SkipUpdates( void );
 // sv_game.c
 //
 struct deadzone_player_spawn_s;
+struct deadzone_player_state_s;
+struct deadzone_move_intent_s;
 qboolean SV_LoadProgs( const char *name );
 void SV_UnloadProgs( void );
 qboolean SV_LoadDeadZoneServer( const char *name, uint32_t requested_version );
 qboolean SV_IsDeadZoneServerLoaded( void );
 qboolean SV_DeadZoneMapLoaded( const char *mapname );
 qboolean SV_DeadZoneGetPlayerSpawn( struct deadzone_player_spawn_s *spawn );
+qboolean SV_DeadZoneGetPlayerState( struct deadzone_player_state_s *state );
+qboolean SV_DeadZoneSimulatePlayer( const struct deadzone_move_intent_s *intent,
+	float frame_seconds, struct deadzone_player_state_s *state );
 void SV_DeadZoneMapUnloaded( void );
 void SV_UnloadDeadZoneServer( void );
 void SV_FreeEdicts( void );
