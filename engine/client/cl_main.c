@@ -3884,9 +3884,21 @@ void Host_ClientFrame( void )
 	// if client is not active, do nothing
 	if( !cls.initialized ) return;
 
-	// DZ-ENG-002 proves native client lifecycle only. Presentation and input
-	// callbacks arrive in later versioned APIs; keep the native client idle.
-	if( CL_IsDeadZoneClientLoaded() ) return;
+	if( CL_IsDeadZoneClientLoaded() )
+	{
+		if( CL_IsDeadZoneLocalMapActive() )
+		{
+			if( cls.key_dest == key_game && !Con_Visible() )
+				Platform_SetTimer( cl_maxframetime.value );
+			cl.oldtime = cl.time;
+			cl.time += host.frametime;
+			ref.dllFuncs.R_ClearScene();
+		}
+
+		VID_CheckChanges();
+		SCR_UpdateScreen();
+		return;
+	}
 	if( cls.key_dest == key_game && cls.state == ca_active && !Con_Visible() )
 		Platform_SetTimer( cl_maxframetime.value );
 

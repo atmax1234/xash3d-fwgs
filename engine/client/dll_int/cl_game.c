@@ -887,6 +887,9 @@ static void CL_DrawLoadingOrPaused( int tex )
 
 void CL_DrawHUD( int state )
 {
+	if( CL_IsDeadZoneClientLoaded() )
+		return;
+
 	if( state == CL_ACTIVE && !cl.video_prepped )
 		state = CL_LOADING;
 

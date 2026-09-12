@@ -28,8 +28,11 @@ GNU General Public License for more details.
 #endif
 
 #define DEADZONE_CLIENT_API_VERSION_1 1u
-#define DEADZONE_CLIENT_API_VERSION DEADZONE_CLIENT_API_VERSION_1
+#define DEADZONE_CLIENT_API_VERSION_2 2u
+#define DEADZONE_CLIENT_API_VERSION DEADZONE_CLIENT_API_VERSION_2
 #define DEADZONE_CLIENT_QUERY_ENTRY "DeadZone_ClientQuery"
+#define DEADZONE_CAMERA_INPUT_VERSION 1u
+#define DEADZONE_CAMERA_STATE_VERSION 1u
 
 typedef int32_t deadzone_client_result_t;
 
@@ -59,6 +62,33 @@ typedef struct deadzone_client_engine_api_s
 
 typedef void ( DEADZONE_CLIENT_API_CALL *deadzone_client_shutdown_fn )( void *context );
 
+/* Borrowed server-authoritative pose. Valid only during camera_frame. */
+typedef struct deadzone_camera_input_s
+{
+	uint32_t size;
+	uint32_t version;
+	uint32_t player_id;
+	float player_origin[3];
+	float player_view_angles[3];
+	float eye_height;
+	float frame_time;
+} deadzone_camera_input_t;
+
+/* Filled by the client module and copied by the engine before return. */
+typedef struct deadzone_camera_state_s
+{
+	uint32_t size;
+	uint32_t version;
+	uint32_t player_id;
+	float view_origin[3];
+	float view_angles[3];
+	float horizontal_fov_degrees;
+} deadzone_camera_state_t;
+
+typedef deadzone_client_result_t ( DEADZONE_CLIENT_API_CALL *deadzone_client_camera_frame_fn )(
+	void *context, const deadzone_camera_input_t *input,
+	deadzone_camera_state_t *camera );
+
 /* Filled by the client module. The engine ignores fields beyond size. */
 typedef struct deadzone_client_api_s
 {
@@ -66,6 +96,8 @@ typedef struct deadzone_client_api_s
 	uint32_t version;
 	void *context;
 	deadzone_client_shutdown_fn shutdown;
+	/* API v2 fields begin here. */
+	deadzone_client_camera_frame_fn camera_frame;
 } deadzone_client_api_t;
 
 typedef deadzone_client_result_t ( DEADZONE_CLIENT_API_CALL *deadzone_client_query_fn )(

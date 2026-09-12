@@ -857,6 +857,13 @@ qboolean CL_LoadProgs( const char *name );
 qboolean CL_LoadDeadZoneClient( const char *name, uint32_t requested_version );
 qboolean CL_IsDeadZoneClientLoaded( void );
 void CL_UnloadDeadZoneClient( void );
+qboolean CL_DeadZoneStartLocalMap( const char *mapname, model_t *worldmodel,
+	uint32_t player_id, const vec3_t origin, const vec3_t view_angles,
+	float eye_height );
+qboolean CL_DeadZoneGetCamera( vec3_t view_origin, vec3_t view_angles,
+	float *horizontal_fov_degrees );
+qboolean CL_IsDeadZoneLocalMapActive( void );
+void CL_DeadZoneStopLocalMap( void );
 void CL_LinkUserMessage( char *pszName, const int svc_num, int iSize );
 void CL_DrawHUD( int state );
 void CL_InitEdicts( int maxclients );

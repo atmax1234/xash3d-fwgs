@@ -3323,8 +3323,6 @@ void R_DrawViewModel( void )
 {
 	cl_entity_t	*view = tr.viewent;
 
-	R_GatherPlayerLight( view );
-
 	if( r_drawviewmodel->value == 0 )
 		return;
 
@@ -3334,6 +3332,8 @@ void R_DrawViewModel( void )
 	// ignore in thirdperson, camera view or client is died
 	if( FBitSet( RI.rvp.flags, RF_DRAW_CUBEMAP ) || ENGINE_GET_PARM( PARM_LOCAL_HEALTH ) <= 0 || !CL_IsViewEntityLocalPlayer())
 		return;
+
+	R_GatherPlayerLight( view );
 
 	tr.blend = CL_FxBlend( view ) / 255.0f;
 	if( !R_ModelOpaque( view->curstate.rendermode ) && tr.blend <= 0.0f )

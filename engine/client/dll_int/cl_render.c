@@ -161,7 +161,7 @@ intptr_t CL_RenderGetParm( const int parm, const int arg, const qboolean checkRe
 		case PARM_DEV_OVERVIEW:
 			return CL_IsDevOverviewMode();
 		case PARM_THIRDPERSON:
-			return CL_IsThirdPerson();
+			return CL_IsDeadZoneClientLoaded() ? false : CL_IsThirdPerson();
 		case PARM_QUAKE_COMPATIBLE:
 			return Host_IsQuakeCompatible();
 		case PARM_CONNSTATE:

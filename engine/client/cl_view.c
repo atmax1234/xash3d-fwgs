@@ -384,6 +384,47 @@ V_RenderView
 
 ==================
 */
+static void V_RenderDeadZoneView( void )
+{
+	static qboolean reported_first_frame = false;
+	ref_viewpass_t rvp;
+	float horizontal_fov;
+
+	if( !cl.video_prepped || !CL_IsDeadZoneLocalMapActive() )
+		return;
+
+	memset( &rvp, 0, sizeof( rvp ));
+	if( !CL_DeadZoneGetCamera( rvp.vieworigin, rvp.viewangles, &horizontal_fov ))
+		return;
+
+	V_CalcViewRect();
+	rvp.viewport[0] = clgame.viewport[0];
+	rvp.viewport[1] = clgame.viewport[1];
+	rvp.viewport[2] = clgame.viewport[2];
+	rvp.viewport[3] = clgame.viewport[3];
+	rvp.viewentity = 1;
+	rvp.fov_x = bound( 10.0f, horizontal_fov, 150.0f );
+	rvp.fov_y = V_CalcFov( &rvp.fov_x, rvp.viewport[2], rvp.viewport[3] );
+	if( refState.wideScreen && r_adjust_fov.value )
+		V_AdjustFov( &rvp.fov_x, &rvp.fov_y,
+			rvp.viewport[2], rvp.viewport[3], false );
+	rvp.flags = RF_DRAW_WORLD;
+
+	ref.dllFuncs.R_Set2DMode( false );
+	SCR_DirtyScreen();
+	ref.dllFuncs.GL_BackendStartFrame();
+	GL_RenderFrame( &rvp );
+	ref.dllFuncs.GL_BackendEndFrame();
+	if( !reported_first_frame )
+	{
+		Con_Printf( "DeadZone native client: rendered first camera frame in original world at (%.1f %.1f %.1f), angles (%.1f %.1f %.1f), viewport %dx%d\n",
+			rvp.vieworigin[0], rvp.vieworigin[1], rvp.vieworigin[2],
+			rvp.viewangles[0], rvp.viewangles[1], rvp.viewangles[2],
+			rvp.viewport[2], rvp.viewport[3] );
+		reported_first_frame = true;
+	}
+}
+
 void V_RenderView( void )
 {
 	// HACKHACK: make ref params static
@@ -391,6 +432,12 @@ void V_RenderView( void )
 	static ref_params_t	rp;
 	ref_viewpass_t	rvp;
 	int		viewnum = 0;
+
+	if( CL_IsDeadZoneClientLoaded() )
+	{
+		V_RenderDeadZoneView();
+		return;
+	}
 
 	if( !cl.video_prepped || ( !ui_renderworld.value && UI_IsVisible() && !cl.background ))
 		return; // still loading
@@ -528,6 +575,16 @@ void V_PostRender( void )
 
 	ref.dllFuncs.R_AllowFog( false );
 	ref.dllFuncs.R_Set2DMode( true );
+
+	if( CL_IsDeadZoneLocalMapActive() )
+	{
+		SCR_MakeScreenShot();
+		ref.dllFuncs.R_AllowFog( true );
+		Platform_SetTimer( 0.0f );
+		ref.dllFuncs.R_EndFrame();
+		V_CheckGammaEnd();
+		return;
+	}
 
 	if( cls.state == ca_active && cls.signon == SIGNONS && cls.scrshot_action != scrshot_mapshot )
 	{

@@ -29,8 +29,10 @@ GNU General Public License for more details.
 
 #define DEADZONE_SERVER_API_VERSION_1 1u
 #define DEADZONE_SERVER_API_VERSION_2 2u
-#define DEADZONE_SERVER_API_VERSION DEADZONE_SERVER_API_VERSION_2
+#define DEADZONE_SERVER_API_VERSION_3 3u
+#define DEADZONE_SERVER_API_VERSION DEADZONE_SERVER_API_VERSION_3
 #define DEADZONE_MAP_INFO_VERSION 1u
+#define DEADZONE_PLAYER_SPAWN_VERSION 1u
 #define DEADZONE_SERVER_QUERY_ENTRY "DeadZone_ServerQuery"
 
 typedef int32_t deadzone_result_t;
@@ -80,6 +82,26 @@ typedef deadzone_result_t ( DEADZONE_API_CALL *deadzone_server_map_loaded_fn )(
 	void *context, const deadzone_map_info_t *map_info );
 typedef void ( DEADZONE_API_CALL *deadzone_server_map_unloaded_fn )( void *context );
 
+/*
+Server-authored primary-player state for the local spawn/camera proof. The
+engine validates the returned pose against the loaded world before exposing it
+to presentation. Movement and replication intentionally arrive in later APIs.
+*/
+typedef struct deadzone_player_spawn_s
+{
+	uint32_t size;
+	uint32_t version;
+	uint32_t player_id;
+	float origin[3];
+	float view_angles[3];
+	float eye_height;
+} deadzone_player_spawn_t;
+
+typedef deadzone_result_t ( DEADZONE_API_CALL *deadzone_server_spawn_player_fn )(
+	void *context, deadzone_player_spawn_t *spawn );
+typedef void ( DEADZONE_API_CALL *deadzone_server_despawn_player_fn )(
+	void *context, uint32_t player_id );
+
 /* Filled by the server module. The engine ignores fields beyond size. */
 typedef struct deadzone_server_api_s
 {
@@ -90,6 +112,9 @@ typedef struct deadzone_server_api_s
 	/* API v2 fields begin here. */
 	deadzone_server_map_loaded_fn map_loaded;
 	deadzone_server_map_unloaded_fn map_unloaded;
+	/* API v3 fields begin here. */
+	deadzone_server_spawn_player_fn spawn_player;
+	deadzone_server_despawn_player_fn despawn_player;
 } deadzone_server_api_t;
 
 typedef deadzone_result_t ( DEADZONE_API_CALL *deadzone_server_query_fn )(

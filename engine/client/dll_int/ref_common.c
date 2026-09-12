@@ -206,7 +206,8 @@ static int Cmd_AddRefCommand( const char *cmd_name, xcommand_t function, const c
 
 static void pfnStudioEvent( const mstudioevent_t *event, const cl_entity_t *e )
 {
-	clgame.dllFuncs.pfnStudioEvent( event, e );
+	if( clgame.dllFuncs.pfnStudioEvent )
+		clgame.dllFuncs.pfnStudioEvent( event, e );
 }
 
 static model_t *pfnGetDefaultSprite( enum ref_defaultsprite_e spr )
@@ -236,7 +237,8 @@ static void *pfnMod_Extradata( int type, model_t *m )
 
 static void CL_ExtraUpdate( void )
 {
-	clgame.dllFuncs.IN_Accumulate();
+	if( clgame.dllFuncs.IN_Accumulate )
+		clgame.dllFuncs.IN_Accumulate();
 	S_ExtraUpdate();
 }
 
@@ -289,12 +291,14 @@ static const bpc_desc_t *pfnImage_GetPFDesc( int idx )
 
 static void pfnDrawNormalTriangles( void )
 {
-	clgame.dllFuncs.pfnDrawNormalTriangles();
+	if( clgame.dllFuncs.pfnDrawNormalTriangles )
+		clgame.dllFuncs.pfnDrawNormalTriangles();
 }
 
 static void pfnDrawTransparentTriangles( void )
 {
-	clgame.dllFuncs.pfnDrawTransparentTriangles();
+	if( clgame.dllFuncs.pfnDrawTransparentTriangles )
+		clgame.dllFuncs.pfnDrawTransparentTriangles();
 }
 
 static screenfade_t *pfnRefGetScreenFade( void )

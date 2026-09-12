@@ -15,10 +15,12 @@ GNU General Public License for more details.
 
 #include "common.h"
 #include "server.h"
+#include "client.h"
 #include "net_encode.h"
 #include "library.h"
 #include "voice.h"
 #include "pm_local.h"
+#include "deadzone_engine_api.h"
 
 #if XASH_LOW_MEMORY != 2
 int SV_UPDATE_BACKUP = SINGLEPLAYER_BACKUP;
@@ -841,6 +843,7 @@ static void SV_SetupClients( void )
 static qboolean SV_SpawnDeadZoneMap( const char *mapname, qboolean background )
 {
 	int i;
+	deadzone_player_spawn_t player_spawn;
 
 	svs.initialized = true;
 	Log_Open();
@@ -877,6 +880,19 @@ static qboolean SV_SpawnDeadZoneMap( const char *mapname, qboolean background )
 	{
 		SV_Shutdown( "DeadZone native map startup failed\n" );
 		return false;
+	}
+
+	if( !Host_IsDedicated() )
+	{
+		memset( &player_spawn, 0, sizeof( player_spawn ));
+		if( !SV_DeadZoneGetPlayerSpawn( &player_spawn ) ||
+			!CL_DeadZoneStartLocalMap( sv.name, sv.worldmodel,
+				player_spawn.player_id, player_spawn.origin,
+				player_spawn.view_angles, player_spawn.eye_height ))
+		{
+			SV_Shutdown( "DeadZone native local camera startup failed\n" );
+			return false;
+		}
 	}
 
 	Host_SetServerState( ss_active );

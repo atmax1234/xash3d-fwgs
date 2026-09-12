@@ -3376,6 +3376,10 @@ qboolean R_AddSurfToVBO( msurface_t *surf, qboolean buildlightmap )
 {
 	const int idx = surf - WORLDMODEL->surfaces;
 
+	/* Lightless native bootstrap maps have no VBO lightmap bucket. */
+	if( !WORLDMODEL->lightdata )
+		return false;
+
 	if( !R_HasGeneratedVBO() || !R_HasEnabledVBO( ))
 		return false;
 
@@ -3970,4 +3974,3 @@ void GL_BuildLightmaps( void )
 		gEngfuncs.drawFuncs->GL_BuildLightmaps( );
 	}
 }
-

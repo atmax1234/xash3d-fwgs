@@ -35,6 +35,7 @@ static void UI_ToggleAllowConsole_f( void )
 
 void UI_UpdateMenu( float realtime )
 {
+	if( CL_IsDeadZoneLocalMapActive() ) return;
 	if( !gameui.hInstance ) return;
 
 	// don't draw menu over console

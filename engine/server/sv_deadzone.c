@@ -15,6 +15,7 @@ GNU General Public License for more details.
 
 #include "common.h"
 #include "server.h"
+#include "client.h"
 #include "library.h"
 #include "deadzone_engine_api.h"
 
@@ -24,6 +25,8 @@ typedef struct deadzone_server_state_s
 	deadzone_engine_api_t engine_api;
 	deadzone_server_api_t server_api;
 	qboolean map_active;
+	qboolean player_active;
+	deadzone_player_spawn_t player_spawn;
 } deadzone_server_state_t;
 
 static deadzone_server_state_t g_deadzone_server;
@@ -33,10 +36,40 @@ STATIC_ASSERT( offsetof( deadzone_engine_api_t, log_message ) == 8 + sizeof( voi
 STATIC_ASSERT( sizeof( deadzone_engine_api_t ) == 8 + ( 2 * sizeof( void * )), "unexpected DeadZone engine API size" );
 STATIC_ASSERT( offsetof( deadzone_server_api_t, shutdown ) == 8 + sizeof( void * ), "unexpected DeadZone server API layout" );
 STATIC_ASSERT( offsetof( deadzone_server_api_t, map_loaded ) == 8 + ( 2 * sizeof( void * )), "unexpected DeadZone server API v2 layout" );
-STATIC_ASSERT( sizeof( deadzone_server_api_t ) == 8 + ( 4 * sizeof( void * )), "unexpected DeadZone server API v2 size" );
+STATIC_ASSERT( offsetof( deadzone_server_api_t, spawn_player ) == 8 + ( 4 * sizeof( void * )), "unexpected DeadZone server API v3 layout" );
+STATIC_ASSERT( sizeof( deadzone_server_api_t ) == 8 + ( 6 * sizeof( void * )), "unexpected DeadZone server API v3 size" );
 STATIC_ASSERT( offsetof( deadzone_map_info_t, name ) == 8, "unexpected DeadZone map info layout" );
 STATIC_ASSERT( offsetof( deadzone_map_info_t, mins ) == 20 + sizeof( void * ), "unexpected DeadZone map info layout" );
 STATIC_ASSERT( offsetof( deadzone_map_info_t, plane_count ) == 44 + sizeof( void * ), "unexpected DeadZone map info layout" );
+STATIC_ASSERT( offsetof( deadzone_player_spawn_t, player_id ) == 8, "unexpected DeadZone player spawn layout" );
+STATIC_ASSERT( offsetof( deadzone_player_spawn_t, origin ) == 12, "unexpected DeadZone player spawn layout" );
+STATIC_ASSERT( sizeof( deadzone_player_spawn_t ) == 40, "unexpected DeadZone player spawn size" );
+
+static qboolean SV_DeadZoneValidateSpawn( const deadzone_player_spawn_t *spawn,
+	const deadzone_map_info_t *map_info )
+{
+	int axis;
+
+	if( !spawn || spawn->size < sizeof( *spawn ) ||
+		spawn->version != DEADZONE_PLAYER_SPAWN_VERSION || spawn->player_id == 0 ||
+		IS_NAN( spawn->eye_height ) || spawn->eye_height <= 0.0f )
+	{
+		return false;
+	}
+
+	for( axis = 0; axis < 3; axis++ )
+	{
+		if( IS_NAN( spawn->origin[axis] ) || IS_NAN( spawn->view_angles[axis] ) ||
+			spawn->view_angles[axis] < -3600.0f || spawn->view_angles[axis] > 3600.0f ||
+			spawn->origin[axis] <= map_info->mins[axis] ||
+			spawn->origin[axis] >= map_info->maxs[axis] )
+		{
+			return false;
+		}
+	}
+
+	return spawn->origin[2] + spawn->eye_height < map_info->maxs[2];
+}
 
 static void DEADZONE_API_CALL SV_DeadZoneLogMessage( void *context,
 	deadzone_log_level_t level, const char *message, uint32_t message_length )
@@ -122,14 +155,19 @@ qboolean SV_LoadDeadZoneServer( const char *name, uint32_t requested_version )
 		return false;
 	}
 
-	const size_t required_size = requested_version >= DEADZONE_SERVER_API_VERSION_2 ?
-		sizeof( deadzone_server_api_t ) : offsetof( deadzone_server_api_t, map_loaded );
+	size_t required_size = offsetof( deadzone_server_api_t, map_loaded );
+	if( requested_version >= DEADZONE_SERVER_API_VERSION_3 )
+		required_size = sizeof( deadzone_server_api_t );
+	else if( requested_version >= DEADZONE_SERVER_API_VERSION_2 )
+		required_size = offsetof( deadzone_server_api_t, spawn_player );
 
 	if( g_deadzone_server.server_api.size < required_size ||
 		g_deadzone_server.server_api.version != requested_version ||
 		!g_deadzone_server.server_api.shutdown ||
 		( requested_version >= DEADZONE_SERVER_API_VERSION_2 &&
-		( !g_deadzone_server.server_api.map_loaded || !g_deadzone_server.server_api.map_unloaded )))
+		( !g_deadzone_server.server_api.map_loaded || !g_deadzone_server.server_api.map_unloaded )) ||
+		( requested_version >= DEADZONE_SERVER_API_VERSION_3 &&
+		( !g_deadzone_server.server_api.spawn_player || !g_deadzone_server.server_api.despawn_player )))
 	{
 		if( g_deadzone_server.server_api.size >= offsetof( deadzone_server_api_t, map_loaded ) &&
 			g_deadzone_server.server_api.shutdown )
@@ -153,6 +191,7 @@ qboolean SV_LoadDeadZoneServer( const char *name, uint32_t requested_version )
 qboolean SV_DeadZoneMapLoaded( const char *mapname )
 {
 	deadzone_map_info_t map_info;
+	deadzone_player_spawn_t spawn;
 	deadzone_result_t result;
 
 	if( !SV_IsDeadZoneServerLoaded() ||
@@ -186,9 +225,40 @@ qboolean SV_DeadZoneMapLoaded( const char *mapname )
 	}
 
 	g_deadzone_server.map_active = true;
+
+	if( g_deadzone_server.server_api.version >= DEADZONE_SERVER_API_VERSION_3 )
+	{
+		memset( &spawn, 0, sizeof( spawn ));
+		spawn.size = sizeof( spawn );
+		result = g_deadzone_server.server_api.spawn_player(
+			g_deadzone_server.server_api.context, &spawn );
+		if( result != DEADZONE_RESULT_SUCCESS || !SV_DeadZoneValidateSpawn( &spawn, &map_info ))
+		{
+			Con_Printf( S_ERROR "DeadZone native loader: server module returned an invalid player spawn (result %d)\n",
+				result );
+			g_deadzone_server.server_api.map_unloaded( g_deadzone_server.server_api.context );
+			g_deadzone_server.map_active = false;
+			return false;
+		}
+
+		g_deadzone_server.player_spawn = spawn;
+		g_deadzone_server.player_active = true;
+		Con_Printf( "DeadZone native loader: authoritative player %u accepted at (%.1f %.1f %.1f)\n",
+			spawn.player_id, spawn.origin[0], spawn.origin[1], spawn.origin[2] );
+	}
+
 	Con_Printf( "DeadZone native loader: map %s accepted (BSP%u, CRC %u, %u planes, %u surfaces, %u leafs)\n",
 		mapname, map_info.bsp_version, map_info.checksum, map_info.plane_count,
 		map_info.surface_count, map_info.leaf_count );
+	return true;
+}
+
+qboolean SV_DeadZoneGetPlayerSpawn( deadzone_player_spawn_t *spawn )
+{
+	if( !spawn || !g_deadzone_server.player_active )
+		return false;
+
+	*spawn = g_deadzone_server.player_spawn;
 	return true;
 }
 
@@ -196,6 +266,19 @@ void SV_DeadZoneMapUnloaded( void )
 {
 	if( !SV_IsDeadZoneServerLoaded() || !g_deadzone_server.map_active )
 		return;
+
+	if( !Host_IsDedicated() )
+		CL_DeadZoneStopLocalMap();
+
+	if( g_deadzone_server.player_active )
+	{
+		g_deadzone_server.server_api.despawn_player(
+			g_deadzone_server.server_api.context,
+			g_deadzone_server.player_spawn.player_id );
+		g_deadzone_server.player_active = false;
+		memset( &g_deadzone_server.player_spawn, 0,
+			sizeof( g_deadzone_server.player_spawn ));
+	}
 
 	g_deadzone_server.server_api.map_unloaded( g_deadzone_server.server_api.context );
 	g_deadzone_server.map_active = false;
